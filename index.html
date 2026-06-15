@@ -1,56 +1,160 @@
-
 <!DOCTYPE html>
-<html lang='zh-HK'>
+<html lang="zh-HK">
 <head>
-<meta charset='UTF-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1.0'>
-<title>復康監控（網頁版）</title>
-<script src='https://cdn.jsdelivr.net/npm/chart.js'></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>復康監控</title>
+
+https://cdn.jsdelivr.net/npm/chart.jsscript>
+
 <style>
-body{font-family:Arial;padding:16px;background:#f5f5f5}
-.container{background:#fff;padding:16px;border-radius:10px;max-width:600px;margin:auto}
-input{width:100%;padding:12px;margin:6px 0;font-size:18px}
-.good{color:green;font-weight:bold}
-.warn{color:orange;font-weight:bold}
-.bad{color:red;font-weight:bold}
-button{width:100%;padding:12px;margin-top:8px;font-size:16px}
+body {font-family: Arial; padding: 20px;}
+input {width: 80px; margin: 5px;}
+button {margin: 5px; padding: 8px;}
+.record {border-bottom:1px solid #ccc; padding:5px;}
 </style>
 </head>
+
 <body>
-<div class='container'>
-<h2>✅ 復康監控（穩定網頁版）</h2>
 
-<input id='b' type='number' placeholder='早餐（分鐘）'>
-<input id='l' type='number' placeholder='午餐（分鐘）'>
-<input id='t' type='number' placeholder='下午茶（分鐘）'>
-<input id='d' type='number' placeholder='晚餐（分鐘）'>
+<h2>復康監控（完整版）</h2>
 
-<input id='wm' type='number' placeholder='行路早（分鐘）'>
-<input id='wa' type='number' placeholder='行路午（分鐘）'>
-<input id='we' type='number' placeholder='行路晚（分鐘）'>
+📅 日期 <input type="date" id="date"><br><br>
 
-<input id='self' type='number' placeholder='自感0-10'>
+早餐 <input id="b">
+午餐 <input id="l">
+下午茶 <input id="t">
+晚餐 <input id="d"><br><br>
+
+行路早 <input id="mw">
+行路午 <input id="nw">
+行路晚 <input id="ew"><br><br>
+
+<button onclick="calculate()">計算</button>
+<button onclick="saveData()">儲存</button>
+
+<hr>
 
 <h3>結果</h3>
-<p id='result'></p>
-<p id='light'></p>
+<p id="result"></p>
+<p id="formula"></p>
+
+<canvas id="chart"></canvas>
+
+<hr>
+
+<h3>📘 歷史記錄</h3>
+<div id="history"></div>
 
 <script>
-function val(id){return Number(document.getElementById(id).value)||0}
-function update(){
- let sit=val('b')+val('l')+val('t')+val('d')
- let walk=val('wm')+val('wa')+val('we')
- let maxSit=Math.max(val('b'),val('l'),val('t'),val('d'))
- let self=val('self')
- let score=sit+(walk*0.5)+maxSit
- document.getElementById('result').innerText=`總坐 ${sit}｜總行 ${walk}｜最長 ${maxSit}｜分數 ${score}`
- let txt=''
- if(sit<=35 && walk<=20 && self<4){txt='✅綠燈'}
- else if(self>=7){txt='🔴紅燈'}
- else{txt='🟡黃燈'}
- document.getElementById('light').innerText=txt
+
+let myChart;
+
+// ✅ 計算
+function calculate() {
+
+let b = +bEl.value || 0;
+let l = +lEl.value || 0;
+let t = +tEl.value || 0;
+let d = +dEl.value || 0;
+
+let mw = +mwEl.value || 0;
+let nw = +nwEl.value || 0;
+let ew = +ewEl.value || 0;
+
+let sit = b + l + t + d;
+let walk = mw + nw + ew;
+
+result.innerHTML =
+"🪑 坐: " + sit + " 分鐘<br>🚶 行: " + walk + " 分鐘";
+
+formula.innerHTML =
+"坐 = 早餐+午餐+下午茶+晚餐<br>行 = 早+午+晚";
+
+drawChart(sit, walk);
 }
-document.querySelectorAll('input').forEach(i=>i.addEventListener('input',update))
+
+// ✅ 圖表
+function drawChart(sit, walk) {
+let ctx = chart.getContext('2d');
+
+if (myChart) myChart.destroy();
+
+myChart = new Chart(ctx, {
+type: 'bar',
+data: {
+labels: ['坐', '行'],
+datasets: [{
+label: '分鐘',
+data: [sit, walk]
+}]
+}
+});
+}
+
+// ✅ 儲存
+function saveData() {
+
+let record = {
+date: dateEl.value,
+b: bEl.value,
+l: lEl.value,
+t: tEl.value,
+d: dEl.value,
+mw: mwEl.value,
+nw: nwEl.value,
+ew: ewEl.value
+};
+
+// 取舊資料
+let list = JSON.parse(localStorage.getItem("records")) || [];
+list.push(record);
+
+localStorage.setItem("records", JSON.stringify(list));
+
+loadHistory();
+
+alert("✅ 已儲存");
+}
+
+// ✅ 顯示歷史
+function loadHistory() {
+
+let list = JSON.parse(localStorage.getItem("records")) || [];
+
+historyDiv.innerHTML = "";
+
+list.reverse().forEach(r => {
+
+let sit = +r.b + +r.l + +r.t + +r.d;
+let walk = +r.mw + +r.nw + +r.ew;
+
+historyDiv.innerHTML += `
+<div class="record">
+📅 ${r.date} | 🪑 ${sit} 分鐘 | 🚶 ${walk} 分鐘
+</div>`;
+});
+}
+
+// ✅ 頁面載入
+window.onload = function() {
+dateEl = document.getElementById("date");
+bEl = document.getElementById("b");
+lEl = document.getElementById("l");
+tEl = document.getElementById("t");
+dEl = document.getElementById("d");
+mwEl = document.getElementById("mw");
+nwEl = document.getElementById("nw");
+ewEl = document.getElementById("ew");
+result = document.getElementById("result");
+formula = document.getElementById("formula");
+chart = document.getElementById("chart");
+historyDiv = document.getElementById("history");
+
+loadHistory();
+}
 </script>
+
 </body>
 </html>
