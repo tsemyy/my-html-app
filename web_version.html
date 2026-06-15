@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+<html lang='zh-HK'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>復康監控（網頁版）</title>
+<script src='https://cdn.jsdelivr.net/npm/chart.js'></script>
+<style>
+body{font-family:Arial;padding:16px;background:#f5f5f5}
+.container{background:#fff;padding:16px;border-radius:10px;max-width:600px;margin:auto}
+input{width:100%;padding:12px;margin:6px 0;font-size:18px}
+.good{color:green;font-weight:bold}
+.warn{color:orange;font-weight:bold}
+.bad{color:red;font-weight:bold}
+button{width:100%;padding:12px;margin-top:8px;font-size:16px}
+</style>
+</head>
+<body>
+<div class='container'>
+<h2>✅ 復康監控（穩定網頁版）</h2>
+
+<input id='b' type='number' placeholder='早餐（分鐘）'>
+<input id='l' type='number' placeholder='午餐（分鐘）'>
+<input id='t' type='number' placeholder='下午茶（分鐘）'>
+<input id='d' type='number' placeholder='晚餐（分鐘）'>
+
+<input id='wm' type='number' placeholder='行路早（分鐘）'>
+<input id='wa' type='number' placeholder='行路午（分鐘）'>
+<input id='we' type='number' placeholder='行路晚（分鐘）'>
+
+<input id='self' type='number' placeholder='自感0-10'>
+
+<h3>結果</h3>
+<p id='result'></p>
+<p id='light'></p>
+
+<script>
+function val(id){return Number(document.getElementById(id).value)||0}
+function update(){
+ let sit=val('b')+val('l')+val('t')+val('d')
+ let walk=val('wm')+val('wa')+val('we')
+ let maxSit=Math.max(val('b'),val('l'),val('t'),val('d'))
+ let self=val('self')
+ let score=sit+(walk*0.5)+maxSit
+ document.getElementById('result').innerText=`總坐 ${sit}｜總行 ${walk}｜最長 ${maxSit}｜分數 ${score}`
+ let txt=''
+ if(sit<=35 && walk<=20 && self<4){txt='✅綠燈'}
+ else if(self>=7){txt='🔴紅燈'}
+ else{txt='🟡黃燈'}
+ document.getElementById('light').innerText=txt
+}
+document.querySelectorAll('input').forEach(i=>i.addEventListener('input',update))
+</script>
+</body>
+</html>
