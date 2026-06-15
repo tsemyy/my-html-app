@@ -3,14 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>復康監控2</title>
+<title>復康監控3</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body {font-family: Arial; padding: 20px;}
-input {width: 80px; margin: 5px;}
+input {width: 70px; margin: 5px;}
 button {margin: 5px; padding: 8px;}
 .record {border-bottom:1px solid #ccc; padding:5px;}
 </style>
@@ -18,9 +17,10 @@ button {margin: 5px; padding: 8px;}
 
 <body>
 
-<h2>復康監控（完整版）</h2>
+<h2>復康監控（選日功能 ✅）</h2>
 
-📅 日期 <input type="date" id="date"><br><br>
+📅 日期 
+<input type="date" id="date" onchange="loadByDate()"><br><br>
 
 早餐 <input id="b">
 午餐 <input id="l">
@@ -32,128 +32,148 @@ button {margin: 5px; padding: 8px;}
 行路晚 <input id="ew"><br><br>
 
 <button onclick="calculate()">計算</button>
-<button onclick="saveData()">儲存</button>
+<button onclick="saveData()">儲存 / 更新</button>
+<button onclick="exportData()">匯出 CSV</button>
 
 <hr>
 
 <h3>結果</h3>
-<p id="result"></p>
-<p id="formula"></p>
+<div id="result"></div>
+<div id="formula"></div>
 
 <canvas id="chart"></canvas>
 
-<hr>
-
-<h3>📘 歷史記錄</h3>
-<div id="history"></div>
-
 <script>
 
-let myChart;
+let chartInstance;
+
+// ✅ 揀日期 → 自動載入
+function loadByDate() {
+
+let date = document.getElementById("date").value;
+if (!date) return;
+
+let data = JSON.parse(localStorage.getItem("records")) || {};
+
+let r = data[date];
+
+if (!r) {
+  // 無資料 → 清空
+  document.getElementById("b").value = "";
+  document.getElementById("l").value = "";
+  document.getElementById("t").value = "";
+  document.getElementById("d").value = "";
+  document.getElementById("mw").value = "";
+  document.getElementById("nw").value = "";
+  document.getElementById("ew").value = "";
+  return;
+}
+
+// 有資料 → 填入
+b.value = r.b;
+l.value = r.l;
+t.value = r.t;
+d.value = r.d;
+mw.value = r.mw;
+nw.value = r.nw;
+ew.value = r.ew;
+
+calculate();
+}
 
 // ✅ 計算
 function calculate() {
 
-let b = +bEl.value || 0;
-let l = +lEl.value || 0;
-let t = +tEl.value || 0;
-let d = +dEl.value || 0;
+let b = Number(document.getElementById("b").value) || 0;
+let l = Number(document.getElementById("l").value) || 0;
+let t = Number(document.getElementById("t").value) || 0;
+let d = Number(document.getElementById("d").value) || 0;
 
-let mw = +mwEl.value || 0;
-let nw = +nwEl.value || 0;
-let ew = +ewEl.value || 0;
+let mw = Number(document.getElementById("mw").value) || 0;
+let nw = Number(document.getElementById("nw").value) || 0;
+let ew = Number(document.getElementById("ew").value) || 0;
 
 let sit = b + l + t + d;
 let walk = mw + nw + ew;
 
-result.innerHTML =
-"🪑 坐: " + sit + " 分鐘<br>🚶 行: " + walk + " 分鐘";
-
-formula.innerHTML =
-"坐 = 早餐+午餐+下午茶+晚餐<br>行 = 早+午+晚";
+result.innerHTML = `🪑 坐: ${sit} ｜ 🚶 行: ${walk}`;
+formula.innerHTML = "坐 = 早餐+午餐+下午茶+晚餐｜行 = 早+午+晚";
 
 drawChart(sit, walk);
 }
 
 // ✅ 圖表
 function drawChart(sit, walk) {
-let ctx = chart.getContext('2d');
+let ctx = document.getElementById("chart").getContext("2d");
 
-if (myChart) myChart.destroy();
+if (chartInstance) chartInstance.destroy();
 
-myChart = new Chart(ctx, {
-type: 'bar',
+chartInstance = new Chart(ctx, {
+type: "bar",
 data: {
-labels: ['坐', '行'],
+labels: ["坐", "行"],
 datasets: [{
-label: '分鐘',
+label: "分鐘",
 data: [sit, walk]
 }]
 }
 });
 }
 
-// ✅ 儲存
+// ✅ 儲存（按日期）
 function saveData() {
 
-let record = {
-date: dateEl.value,
-b: bEl.value,
-l: lEl.value,
-t: tEl.value,
-d: dEl.value,
-mw: mwEl.value,
-nw: nwEl.value,
-ew: ewEl.value
+let date = document.getElementById("date").value;
+if (!date) {
+alert("請先選日期");
+return;
+}
+
+let data = JSON.parse(localStorage.getItem("records")) || {};
+
+data[date] = {
+b: b.value,
+l: l.value,
+t: t.value,
+d: d.value,
+mw: mw.value,
+nw: nw.value,
+ew: ew.value
 };
 
-// 取舊資料
-let list = JSON.parse(localStorage.getItem("records")) || [];
-list.push(record);
+localStorage.setItem("records", JSON.stringify(data));
 
-localStorage.setItem("records", JSON.stringify(list));
-
-loadHistory();
-
-alert("✅ 已儲存");
+alert("✅ 已儲存 / 覆蓋該日資料");
 }
 
-// ✅ 顯示歷史
-function loadHistory() {
+// ✅ 匯出 CSV
+function exportData() {
 
-let list = JSON.parse(localStorage.getItem("records")) || [];
+let data = JSON.parse(localStorage.getItem("records")) || {};
+let dates = Object.keys(data);
 
-historyDiv.innerHTML = "";
+if (dates.length === 0) {
+alert("無資料");
+return;
+}
 
-list.reverse().forEach(r => {
+let csv = "日期,早餐,午餐,下午茶,晚餐,行路早,行路午,行路晚\n";
 
-let sit = +r.b + +r.l + +r.t + +r.d;
-let walk = +r.mw + +r.nw + +r.ew;
-
-historyDiv.innerHTML += `
-<div class="record">
-📅 ${r.date} | 🪑 ${sit} 分鐘 | 🚶 ${walk} 分鐘
-</div>`;
+dates.forEach(d => {
+let r = data[d];
+csv += `${d},${r.b},${r.l},${r.t},${r.d},${r.mw},${r.nw},${r.ew}\n`;
 });
+
+let blob = new Blob([csv], { type: "text/csv" });
+let url = URL.createObjectURL(blob);
+
+let a = document.createElement("a");
+a.href = url;
+a.download = "復康記錄.csv";
+a.click();
+
 }
 
-// ✅ 頁面載入
-window.onload = function() {
-dateEl = document.getElementById("date");
-bEl = document.getElementById("b");
-lEl = document.getElementById("l");
-tEl = document.getElementById("t");
-dEl = document.getElementById("d");
-mwEl = document.getElementById("mw");
-nwEl = document.getElementById("nw");
-ewEl = document.getElementById("ew");
-result = document.getElementById("result");
-formula = document.getElementById("formula");
-chart = document.getElementById("chart");
-historyDiv = document.getElementById("history");
-
-loadHistory();
-}
 </script>
 
 </body>
