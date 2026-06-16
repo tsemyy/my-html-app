@@ -2,62 +2,93 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>復康監控 v4 ☁️</title>
+<title>復康監控 v3.8 ✅</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body{font-family:Arial;background:#f0f2f5;margin:0;}
-.header{background:#0078D7;color:#fff;text-align:center;padding:14px;}
-.card{background:#fff;margin:10px;padding:10px;border-radius:10px;}
-
-.grid{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:6px;
+body {
+  font-family: Arial;
+  margin: 0;
+  background: #f0f2f5;
 }
 
-input{width:100%;padding:6px;}
-button{
-width:100%;
-padding:10px;
-margin-top:6px;
-border:none;
-background:#0078D7;
-color:white;
-border-radius:6px;
+/* Header */
+.header {
+  background: #0078D7;
+  color: white;
+  text-align: center;
+  padding: 10px;
+  font-size: 18px;
+}
+
+/* 卡片 */
+.card {
+  background: white;
+  margin: 8px;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+/* ✅ 關鍵：label + input 黐埋 */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 4px 0;
+}
+
+.row label {
+  width: 40%;
+  font-size: 14px;
+}
+
+.row input {
+  width: 55%;
+  padding: 6px;
+}
+
+/* Button */
+button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
+  background: #0078D7;
+  color: white;
+  border: none;
+  border-radius: 6px;
+}
+
+/* Result */
+.result {
+  font-size: 14px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">復康監控 v4 ☁️ 完整版</div>
+<div class="header">復康監控 v3.8 ✅</div>
 
 <div class="card">
-<div class="grid">
 
-<label>早餐</label><input id="b" type="number" inputmode="numeric">
-<label>午餐</label><input id="l" type="number" inputmode="numeric">
+<!-- ✅ 每行一個（但貼住，唔會拉長） -->
+<div class="row"><label>早餐</label><input id="b" type="number"></div>
+<div class="row"><label>午餐</label><input id="l" type="number"></div>
+<div class="row"><label>下午茶</label><input id="t" type="number"></div>
+<div class="row"><label>晚餐</label><input id="d" type="number"></div>
 
-<label>下午茶</label><input id="t" type="number" inputmode="numeric">
-<label>晚餐</label><input id="d" type="number" inputmode="numeric">
-
-<label>行早</label><input id="w1" type="number" inputmode="numeric">
-<label>行午</label><input id="w2" type="number" inputmode="numeric">
-
-<label>行晚</label><input id="w3" type="number" inputmode="numeric">
-
-</div>
+<div class="row"><label>行早</label><input id="w1" type="number"></div>
+<div class="row"><label>行午</label><input id="w2" type="number"></div>
+<div class="row"><label>行晚</label><input id="w3" type="number"></div>
 
 <button onclick="save()">💾 儲存</button>
 <button onclick="exportPDF()">📄 PDF</button>
 <button onclick="exportCSV()">📊 Excel</button>
+
 </div>
 
-<div class="card">
-<div id="result"></div>
-</div>
+<div class="card result" id="result"></div>
 
 <div class="card">
 <div id="history"></div>
@@ -67,30 +98,10 @@ border-radius:6px;
 <canvas id="chart"></canvas>
 </div>
 
-<!-- ✅ Firebase -->
-<script type="module">
+<script>
+let records = JSON.parse(localStorage.getItem("records")||"[]");
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit }
-from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
-
-// ✅ 你個 config（KEEP）
-const firebaseConfig = {
-  apiKey: "AIzaSyAeorlICRrg9yj1PqTArO5i1yVQV-tl3ME",
-  authDomain: "rehab-monitor-e20e8.firebaseapp.com",
-  projectId: "rehab-monitor-e20e8",
-  storageBucket: "rehab-monitor-e20e8.firebasestorage.app",
-  messagingSenderId: "399484763720",
-  appId: "1:399484763720:web:765fc329881851029f627d"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-let records = [];
-
-// ✅ 儲存
-window.save = async function(){
+function save(){
 
 let bV=Number(b.value||0);
 let lV=Number(l.value||0);
@@ -108,65 +119,48 @@ let maxSit = Math.max(bV,lV,tV,dV);
 
 let score = sit + walk*0.5 + maxSit;
 
-// ✅ alert（你要求）
+// ✅ 日期（你話要返🔥）
+let date = new Date().toLocaleDateString();
+
+// ✅ alert
 if(score>=60){alert("✅ 今日達標！");}
 
-let data={
-date:new Date().toISOString(),
-sit,walk,maxSit,score
-};
+let data={date,sit,walk,maxSit,score};
 
-// ✅ 存雲端
-await addDoc(collection(db,"records"),data);
+records.push(data);
+if(records.length>7) records.shift();
 
-// ✅ reload
-load();
-
-};
-
-// ✅ 讀60日
-async function load(){
-
-const q=query(
-collection(db,"records"),
-orderBy("date","desc"),
-limit(60)
-);
-
-const snapshot=await getDocs(q);
-
-records=[];
-snapshot.forEach(doc=>records.push(doc.data()));
-
-records.reverse();
+localStorage.setItem("records",JSON.stringify(records));
 
 render();
 }
 
-// ✅ 顯示
 function render(){
 
 if(records.length==0)return;
 
 let r=records[records.length-1];
 
-result.innerHTML=
-`總坐: ${r.sit}<br>
-總行: ${r.walk}<br>
+// ✅ 顯示完整資料 + 方程式
+result.innerHTML =
+`📅 ${r.date}<br>
+總坐: ${r.sit} 分鐘<br>
+總行: ${r.walk} 分鐘<br>
 maxSit: ${r.maxSit}<br><br>
 
-方程式:<br>
+計算:<br>
 = ${r.sit} + ${r.walk}×0.5 + ${r.maxSit}<br>
 = ${r.score}`;
 
+// ✅ 歷史（短版）
 let html="";
 records.forEach(x=>{
-html+=`${x.date.substring(0,10)} ⭐${x.score}<br>`;
+html+=`${x.date} ⭐${x.score}<br>`;
 });
 history.innerHTML=html;
 
-// chart
-let labels=records.map(x=>x.date.substring(0,10));
+// ✅ 圖表
+let labels=records.map(x=>x.date);
 let walkArr=records.map(x=>x.walk);
 let sitArr=records.map(x=>x.sit);
 let scoreArr=records.map(x=>x.score);
@@ -183,13 +177,15 @@ datasets:[
 ]
 }
 });
-
 }
 
-window.exportPDF=()=>window.print();
+// ✅ PDF
+function exportPDF(){
+window.print();
+}
 
 // ✅ CSV
-window.exportCSV=()=>{
+function exportCSV(){
 let csv="日期,坐,行,maxSit,分數\n";
 records.forEach(r=>{
 csv+=`${r.date},${r.sit},${r.walk},${r.maxSit},${r.score}\n`;
@@ -199,11 +195,10 @@ let a=document.createElement("a");
 a.href=URL.createObjectURL(blob);
 a.download="report.csv";
 a.click();
-};
+}
 
-// ✅ 開機
-load();
-
+// ✅ 載入
+render();
 </script>
 
 </body>
