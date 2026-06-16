@@ -2,77 +2,42 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>復康監控 v3.8 ✅</title>
+<title>復康監控 v6 FINAL ✅</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body {
-  font-family: Arial;
-  margin: 0;
-  background: #f0f2f5;
+body{font-family:Arial;margin:0;background:#f0f2f5;}
+.header{background:#0078D7;color:#fff;text-align:center;padding:10px;}
+.card{background:#fff;margin:8px;padding:10px;border-radius:10px;}
+
+.row{display:flex;align-items:center;gap:8px;margin:5px 0;}
+.row label{width:80px;}
+.row input{flex:1;padding:6px;}
+
+button{
+width:100%;padding:10px;margin-top:5px;
+background:#0078D7;color:white;border:none;border-radius:6px;
 }
 
-/* Header */
-.header {
-  background: #0078D7;
-  color: white;
-  text-align: center;
-  padding: 10px;
-  font-size: 18px;
-}
-
-/* 卡片 */
-.card {
-  background: white;
-  margin: 8px;
-  padding: 10px;
-  border-radius: 10px;
-}
-
-/* ✅ 關鍵：label + input 黐埋 */
-.row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 4px 0;
-}
-
-.row label {
-  width: 40%;
-  font-size: 14px;
-}
-
-.row input {
-  width: 55%;
-  padding: 6px;
-}
-
-/* Button */
-button {
-  width: 100%;
-  padding: 10px;
-  margin-top: 6px;
-  background: #0078D7;
-  color: white;
-  border: none;
-  border-radius: 6px;
-}
-
-/* Result */
-.result {
-  font-size: 14px;
-}
+.light{padding:5px 10px;border-radius:8px;color:#fff;}
+.green{background:green;}
+.yellow{background:orange;}
+.red{background:red;}
 </style>
 </head>
 
 <body>
 
-<div class="header">復康監控 v3.8 ✅</div>
+<div class="header">復康監控 v6 🚦✅</div>
 
 <div class="card">
 
-<!-- ✅ 每行一個（但貼住，唔會拉長） -->
+<div class="row">
+<label>日期</label>
+<input id="date" type="date" onchange="loadByDate()">
+</div>
+
 <div class="row"><label>早餐</label><input id="b" type="number"></div>
 <div class="row"><label>午餐</label><input id="l" type="number"></div>
 <div class="row"><label>下午茶</label><input id="t" type="number"></div>
@@ -82,122 +47,165 @@ button {
 <div class="row"><label>行午</label><input id="w2" type="number"></div>
 <div class="row"><label>行晚</label><input id="w3" type="number"></div>
 
-<button onclick="save()">💾 儲存</button>
+<!-- ✅ ✅ 這個就是儲存按鈕 -->
+<button onclick="save()">💾 儲存 / 更新</button>
+
 <button onclick="exportPDF()">📄 PDF</button>
 <button onclick="exportCSV()">📊 Excel</button>
 
 </div>
 
-<div class="card result" id="result"></div>
-
-<div class="card">
-<div id="history"></div>
-</div>
+<div class="card" id="result"></div>
+<div class="card" id="history"></div>
 
 <div class="card">
 <canvas id="chart"></canvas>
 </div>
 
 <script>
+
+// ✅ 預設今日日期
+date.value = new Date().toISOString().slice(0,10);
+
 let records = JSON.parse(localStorage.getItem("records")||"[]");
 
+// ✅ 載入舊資料
+function loadByDate(){
+let d=date.value;
+let r=records.find(x=>x.date===d);
+if(r){
+b.value=r.b||0;
+l.value=r.l||0;
+t.value=r.t||0;
+d.value=r.d||0;
+w1.value=r.w1||0;
+w2.value=r.w2||0;
+w3.value=r.w3||0;
+render();
+}
+}
+
+// ✅ 儲存 / 更新
 function save(){
 
-let bV=Number(b.value||0);
-let lV=Number(l.value||0);
-let tV=Number(t.value||0);
-let dV=Number(d.value||0);
+let bV=+b.value||0;
+let lV=+l.value||0;
+let tV=+t.value||0;
+let dV=+d.value||0;
 
-let w1V=Number(w1.value||0);
-let w2V=Number(w2.value||0);
-let w3V=Number(w3.value||0);
+let w1V=+w1.value||0;
+let w2V=+w2.value||0;
+let w3V=+w3.value||0;
 
-// ✅ 計算
-let sit = bV+lV+tV+dV;
-let walk = w1V+w2V+w3V;
-let maxSit = Math.max(bV,lV,tV,dV);
+let sit=bV+lV+tV+dV;
+let walk=w1V+w2V+w3V;
+let maxSit=Math.max(bV,lV,tV,dV);
 
-let score = sit + walk*0.5 + maxSit;
+let score=sit+(walk*0.5)+maxSit;
 
-// ✅ 日期（你話要返🔥）
-let date = new Date().toLocaleDateString();
+// 🚦 燈號
+let lightClass="green", lightText="🟢 正常";
+if(score>80){lightClass="red";lightText="🔴 偏高";}
+else if(score>=60){lightClass="yellow";lightText="🟡 注意";}
 
-// ✅ alert
-if(score>=60){alert("✅ 今日達標！");}
+// 🤖 評語
+let comment="✅ 狀態良好";
+if(score>80) comment="⚠️ 坐太多，建議減少";
+else if(score>=60) comment="🙂 可改善";
 
-let data={date,sit,walk,maxSit,score};
+// ⚠️ 提示
+let warning="";
+if(score>65) warning="⚠️ 建議減少坐時間";
 
-records.push(data);
-if(records.length>7) records.shift();
+let data={
+date:date.value,
+sit,walk,maxSit,score,
+b:bV,l:lV,t:tV,d:dV,
+w1:w1V,w2:w2V,w3:w3V
+};
+
+// ✅ 防重複
+let i=records.findIndex(x=>x.date===data.date);
+if(i>=0) records[i]=data;
+else records.push(data);
 
 localStorage.setItem("records",JSON.stringify(records));
 
-render();
+render(lightClass,lightText,warning,comment);
 }
 
-function render(){
+// ✅ 顯示
+function render(lightClass="",lightText="",warning="",comment=""){
 
 if(records.length==0)return;
 
 let r=records[records.length-1];
 
-// ✅ 顯示完整資料 + 方程式
-result.innerHTML =
-`📅 ${r.date}<br>
-總坐: ${r.sit} 分鐘<br>
-總行: ${r.walk} 分鐘<br>
-maxSit: ${r.maxSit}<br><br>
+if(!lightText){
+if(r.score>80){lightClass="red";lightText="🔴 偏高";}
+else if(r.score>=60){lightClass="yellow";lightText="🟡 注意";}
+else{lightClass="green";lightText="🟢 正常";}
+}
 
-計算:<br>
-= ${r.sit} + ${r.walk}×0.5 + ${r.maxSit}<br>
-= ${r.score}`;
+result.innerHTML=`
+📅 ${r.date} <span class="light ${lightClass}">${lightText}</span><br><br>
 
-// ✅ 歷史（短版）
-let html="";
-records.forEach(x=>{
-html+=`${x.date} ⭐${x.score}<br>`;
+🚶 行: ${r.walk}<br>
+🪑 坐: ${r.sit}<br>
+📌 最長坐: ${r.maxSit}<br><br>
+
+📐 公式<br>
+總分 = 坐 + (行×0.5) + 最長坐<br><br>
+
+🧮 代入<br>
+= ${r.sit} + (${r.walk}×0.5) + ${r.maxSit}<br>
+= ${r.sit} + ${r.walk*0.5} + ${r.maxSit}<br>
+= <b>${r.score}</b><br><br>
+
+🤖 ${comment}<br>
+${warning}
+`;
+
+// 歷史
+let h="";
+records.slice(-7).forEach(x=>{
+h+=`📅 ${x.date} ⭐${x.score}<br>`;
 });
-history.innerHTML=html;
+history.innerHTML=h;
 
-// ✅ 圖表
+// 圖表
 let labels=records.map(x=>x.date);
-let walkArr=records.map(x=>x.walk);
-let sitArr=records.map(x=>x.sit);
-let scoreArr=records.map(x=>x.score);
 
 if(window.chart) chart.destroy();
 
-window.chart=new Chart(chart,{
+chart=new Chart(document.getElementById("chart"),{
+type:"bar",
 data:{
-labels:labels,
+labels,
 datasets:[
-{label:"行",data:walkArr,backgroundColor:"green"},
-{label:"坐",data:sitArr,backgroundColor:"orange"},
-{label:"分數",data:scoreArr,type:"line",borderColor:"blue"}
+{label:"行",data:records.map(x=>x.walk),backgroundColor:"green"},
+{label:"坐",data:records.map(x=>x.sit),backgroundColor:"orange"},
+{label:"分數",data:records.map(x=>x.score),type:"line",borderColor:"blue"}
 ]
 }
 });
 }
 
-// ✅ PDF
-function exportPDF(){
-window.print();
-}
+// PDF
+function exportPDF(){print();}
 
-// ✅ CSV
+// CSV
 function exportCSV(){
-let csv="日期,坐,行,maxSit,分數\n";
+let csv="日期,行,坐,maxSit,分數\n";
 records.forEach(r=>{
-csv+=`${r.date},${r.sit},${r.walk},${r.maxSit},${r.score}\n`;
+csv+=`${r.date},${r.walk},${r.sit},${r.maxSit},${r.score}\n`;
 });
-let blob=new Blob([csv]);
 let a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="report.csv";
+a.href=URL.createObjectURL(new Blob([csv]));
+a.download="復康監控報告.csv";
 a.click();
 }
 
-// ✅ 載入
 render();
 </script>
 
