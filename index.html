@@ -2,8 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>復康監控 v7 🚀</title>
-
+<title>復康監控 v7 FINAL ✅</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -12,11 +11,21 @@ body{font-family:Arial;margin:0;background:#f0f2f5;}
 
 .card{background:#fff;margin:8px;padding:10px;border-radius:10px;}
 
+/* ✅ input 唔爆 */
 .row{display:flex;align-items:center;gap:6px;margin:6px 0;}
 .row label{width:60px;}
-.row input{
-width:70px;
-padding:5px;
+.row input{width:65px;padding:5px;}
+
+/* ✅ 按鈕橫排 */
+.btnRow{display:flex;gap:6px;margin-top:8px;}
+.btnRow button{
+flex:1;
+padding:8px;
+font-size:12px;
+background:#0078D7;
+color:#fff;
+border:none;
+border-radius:6px;
 }
 
 /* 🚦 */
@@ -25,14 +34,11 @@ padding:5px;
 .yellow{background:orange;}
 .red{background:red;}
 
-button{
-width:100%;
-padding:10px;
-margin-top:5px;
-background:#0078D7;
-color:white;
-border:none;
-border-radius:6px;
+canvas{width:100%!important;height:220px!important;}
+
+@media print{
+.btnRow{display:none;}
+canvas{display:none;}
 }
 </style>
 </head>
@@ -43,10 +49,8 @@ border-radius:6px;
 
 <div class="card">
 
-<div class="row">
-<label>日期</label>
-<input id="date" type="date" onchange="loadByDate()">
-</div>
+<div class="row"><label>日期</label>
+<input id="date" type="date"></div>
 
 <div class="row"><label>早餐</label><input id="b" type="number"></div>
 <div class="row"><label>午餐</label><input id="l" type="number"></div>
@@ -57,33 +61,22 @@ border-radius:6px;
 <div class="row"><label>行午</label><input id="w2" type="number"></div>
 <div class="row"><label>行晚</label><input id="w3" type="number"></div>
 
-<button onclick="save()">💾 儲存 / 更新</button>
-<button onclick="exportPDF()">📄 PDF</button>
-<button onclick="exportCSV()">📊 Excel</button>
+<div class="btnRow">
+<button onclick="save()">💾 存</button>
+<button onclick="exportPDF()">PDF</button>
+<button onclick="exportCSV()">Excel</button>
+</div>
 
 </div>
 
 <div class="card" id="result"></div>
-<div class="card" id="history"></div>
-
-<div class="card">
-<canvas id="chart"></canvas>
-</div>
+<div class="card"><canvas id="chart"></canvas></div>
 
 <script>
 
 date.value=new Date().toISOString().slice(0,10);
 
 let records=JSON.parse(localStorage.getItem("records")||"[]");
-
-function loadByDate(){
-let r=records.find(x=>x.date===date.value);
-if(r){
-b.value=r.b||0;l.value=r.l||0;t.value=r.t||0;d.value=r.d||0;
-w1.value=r.w1||0;w2.value=r.w2||0;w3.value=r.w3||0;
-render();
-}
-}
 
 function save(){
 
@@ -96,22 +89,17 @@ let maxSit=Math.max(bV,lV,tV,dV);
 
 let score=sit+(walk*0.5)+maxSit;
 
-// 燈號
-let light="🟢 正常",cls="green";
-if(score>80){light="🔴 偏高";cls="red";}
-else if(score>=60){light="🟡 注意";cls="yellow";}
+// 🚦
+let cls="green",light="🟢";
+if(score>80){cls="red";light="🔴";}
+else if(score>=60){cls="yellow";light="🟡";}
 
-// 🤖 評語 + 趨勢
-let comment="",trend="";
-if(records.length>0){
-let last=records[records.length-1].score;
-trend = score>last?"📈 上升":"📉 下降";
-}
+// 🤖 評語
+let comment="✅ 正常";
+if(score>80) comment="⚠️ 坐太多";
+else if(score>=60) comment="🙂 注意";
 
-if(score>80) comment="⚠️ 坐太多，建議減少";
-else if(score>=60) comment="🙂 可改善";
-else comment="✅ 狀態良好";
-
+// 存
 let data={date:date.value,sit,walk,maxSit,score,
 b:bV,l:lV,t:tV,d:dV,w1:w1V,w2:w2V,w3:w3V};
 
@@ -121,47 +109,52 @@ else records.push(data);
 
 localStorage.setItem("records",JSON.stringify(records));
 
-render(cls,light,comment,trend);
+render(cls,light,comment);
 }
 
-function render(cls="",light="",comment="",trend=""){
-
-if(records.length==0)return;
+// ✅ 顯示（最重要已修正）
+function render(cls="",light="",comment=""){
+if(!records.length) return;
 
 let r=records[records.length-1];
 
 result.innerHTML=`
 📅 ${r.date} <span class="light ${cls}">${light}</span><br><br>
 
-🚶 行: ${r.walk}<br>
-🪑 坐: ${r.sit}<br>
-📌 最長坐: ${r.maxSit}<br><br>
+🍽 坐<br>
+早餐:${r.b} 午餐:${r.l}<br>
+下午:${r.t} 晚餐:${r.d}<br><br>
 
-📐 公式<br>
-總分 = 坐+(行×0.5)+最長坐<br><br>
+🚶 行<br>
+早:${r.w1} 午:${r.w2} 晚:${r.w3}<br><br>
 
-🧮 代入<br>
+📊 總<br>
+坐:${r.sit} 行:${r.walk}<br>
+max:${r.maxSit}<br><br>
+
+🧮 計算<br>
 = ${r.sit}+(${r.walk}×0.5)+${r.maxSit}<br>
-= ${r.sit}+${r.walk*0.5}+${r.maxSit}<br>
-= <b>${r.score}</b><br><br>
+= ${r.score}<br><br>
 
-${trend}<br>
 🤖 ${comment}
 `;
 
-history.innerHTML = records.slice(-7).map(x=>`📅 ${x.date} ⭐${x.score}`).join("<br>");
+drawChart();
+}
 
-// chart
+// ✅ 圖表 FIX
+function drawChart(){
+let ctx=document.getElementById("chart").getContext("2d");
 if(window.chart) window.chart.destroy();
 
-window.chart=new Chart(document.getElementById("chart"),{
+window.chart=new Chart(ctx,{
 type:"bar",
 data:{
 labels:records.map(x=>x.date),
 datasets:[
 {label:"行",data:records.map(x=>x.walk),backgroundColor:"green"},
 {label:"坐",data:records.map(x=>x.sit),backgroundColor:"orange"},
-{label:"分數",data:records.map(x=>x.score),type:"line",borderColor:"blue"}
+{label:"分",data:records.map(x=>x.score),type:"line",borderColor:"blue"}
 ]
 }
 });
@@ -169,20 +162,20 @@ datasets:[
 
 function exportPDF(){print();}
 
+// ✅ CSV 完整
 function exportCSV(){
-let csv="日期,早餐,午餐,下午茶,晚餐,行早,行午,行晚,坐,行,maxSit,分數\n";
+let csv="日期,早餐,午餐,下午,晚餐,行早,行午,行晚,總坐,總行,maxSit,分數\n";
 records.forEach(r=>{
 csv+=`${r.date},${r.b},${r.l},${r.t},${r.d},${r.w1},${r.w2},${r.w3},${r.sit},${r.walk},${r.maxSit},${r.score}\n`;
 });
 let a=document.createElement("a");
 a.href=URL.createObjectURL(new Blob([csv]));
-a.download="復康監控完整數據.csv";
+a.download="復康完整數據.csv";
 a.click();
 }
 
 render();
 
 </script>
-
 </body>
 </html>
