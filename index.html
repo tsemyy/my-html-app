@@ -1,180 +1,195 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>復康監控4</title>
+<title>復康監控 v2.0</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body {font-family: Arial; padding: 20px;}
-input {width: 70px; margin: 5px;}
-button {margin: 5px; padding: 8px;}
+body {
+  font-family: Arial;
+  background: #f0f2f5;
+  margin: 0;
+}
+
+/* Header */
+.header {
+  background: #0078D7;
+  color: white;
+  padding: 15px;
+  text-align: center;
+  font-size: 20px;
+}
+
+/* Card */
+.card {
+  background: white;
+  border-radius: 15px;
+  padding: 15px;
+  margin: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Inputs */
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+/* Button */
+button {
+  padding: 12px;
+  width: 100%;
+  background: #0078D7;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+/* Badge */
+.badge {
+  padding: 5px 10px;
+  border-radius: 8px;
+  color: white;
+  font-size: 12px;
+}
+.good { background: green; }
+.mid { background: orange; }
+.bad { background: red; }
+
 </style>
 </head>
 
 <body>
 
-<h2>復康監控 ✅（最終版）</h2>
+<div class="header">復康監控 v2.0 🚀</div>
 
-📅 日期 
-<input type="date" id="date" onchange="loadByDate()"><br><br>
+<div class="card">
+  <h3>📅 今日填表</h3>
 
-早餐 <input type="number" inputmode="numeric" id="b">
-午餐 <input type="number" inputmode="numeric" id="l">
-下午茶 <input type="number" inputmode="numeric" id="t">
-晚餐 <input type="number" inputmode="numeric" id="d"><br><br>
+  日期 <input type="date" id="date">
 
-行路早 <input type="number" inputmode="numeric" id="mw">
-行路午 <input type="number" inputmode="numeric" id="nw">
-行路晚 <input type="number" inputmode="numeric" id="ew"><br><br>
+  早餐 <input type="number" id="b">
+  午餐 <input type="number" id="l">
+  晚餐 <input type="number" id="d">
 
-<button onclick="calculate()">計算</button>
-<button onclick="saveData()">儲存</button>
-<button onclick="exportData()">匯出 CSV</button>
+  行路早 <input type="number" id="w1">
+  行路午 <input type="number" id="w2">
+  行路晚 <input type="number" id="w3">
 
-<hr>
+  <button onclick="save()">💾 儲存</button>
+</div>
 
-<h3>結果</h3>
-<div id="result"></div>
-<div id="score"></div>
-<div id="light"></div>
+<div class="card">
+  <h3>📊 今日結果</h3>
+  <div id="result"></div>
+</div>
 
-<canvas id="chart"></canvas>
+<div class="card">
+  <h3>📅 最近7日記錄</h3>
+  <div id="history"></div>
+</div>
+
+<div class="card">
+  <h3>📈 活動圖表</h3>
+  <canvas id="chart"></canvas>
+</div>
 
 <script>
+let records = JSON.parse(localStorage.getItem("records") || "[]");
 
-let chartInstance;
-
-// ✅ 揀日期
-function loadByDate() {
-let data = JSON.parse(localStorage.getItem("records")) || {};
-let date = document.getElementById("date").value;
-
-if (!data[date]) {
-b.value=""; l.value=""; t.value=""; d.value="";
-mw.value=""; nw.value=""; ew.value="";
-return;
+// ⏰ 提醒功能
+function checkSit(walk) {
+  let sit = 60 - walk;
+  if (sit > 45) {
+    alert("⚠️ 坐太耐啦！起身行下啦！");
+  }
 }
 
-let r = data[date];
+function save() {
+  const data = {
+    date: date.value,
+    food: Number(b.value)+Number(l.value)+Number(d.value),
+    walk: Number(w1.value)+Number(w2.value)+Number(w3.value)
+  };
 
-b.value = r.b;
-l.value = r.l;
-t.value = r.t;
-d.value = r.d;
-mw.value = r.mw;
-nw.value = r.nw;
-ew.value = r.ew;
+  data.sit = 60 - data.walk;
+  data.score = data.food + data.walk;
 
-calculate();
+  checkSit(data.walk); // ✅ 檢查
+
+  records.push(data);
+  if (records.length > 7) records.shift();
+
+  localStorage.setItem("records", JSON.stringify(records));
+
+  render();
 }
 
-// ✅ 計算（你正確公式）
-function calculate() {
+function render() {
 
-let b = +document.getElementById("b").value || 0;
-let l = +document.getElementById("l").value || 0;
-let t = +document.getElementById("t").value || 0;
-let d = +document.getElementById("d").value || 0;
+  if (records.length > 0) {
+    let r = records[records.length-1];
 
-let mw = +document.getElementById("mw").value || 0;
-let nw = +document.getElementById("nw").value || 0;
-let ew = +document.getElementById("ew").value || 0;
+    let status = "";
+    if (r.score > 60) status = '<span class="badge good">良好</span>';
+    else if (r.score > 40) status = '<span class="badge mid">一般</span>';
+    else status = '<span class="badge bad">不足</span>';
 
-let sit = b + l + t + d;
-let walk = mw + nw + ew;
-let maxSit = Math.max(b,l,t,d);
+    document.getElementById("result").innerHTML =
+      `⭐ 分數: ${r.score} ${status}<br>
+       🚶 行: ${r.walk} 分鐘<br>
+       🪑 坐: ${r.sit} 分鐘`;
+  }
 
-// ✅ ✅ 你的公式
-let score = sit + walk * 0.5 + maxSit;
+  // 歷史
+  let html = "";
+  records.forEach(r=>{
+    html += `<div>📅 ${r.date}｜⭐${r.score}｜🚶${r.walk}</div>`;
+  });
+  document.getElementById("history").innerHTML = html;
 
-document.getElementById("result").innerHTML =
-`🪑 坐:${sit} ｜ 🚶 行:${walk} ｜ ⏱ 最長坐:${maxSit}`;
+  // 圖表
+  let labels = records.map(r=>r.date);
+  let walk = records.map(r=>r.walk);
+  let sit = records.map(r=>r.sit);
+  let score = records.map(r=>r.score);
 
-document.getElementById("score").innerHTML =
-`⭐ 分數: ${score.toFixed(1)}`;
+  if (window.myChart) window.myChart.destroy();
 
-// ✅ 燈號
-let light = "🟢";
-let color = "green";
-
-if (score > 80) {
-  light = "🔴";
-  color = "red";
-} else if (score > 50) {
-  light = "🟡";
-  color = "orange";
+  window.myChart = new Chart(document.getElementById("chart"), {
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: "行路",
+          data: walk,
+          backgroundColor: "green"
+        },
+        {
+          label: "坐",
+          data: sit,
+          backgroundColor: "orange"
+        },
+        {
+          label: "分數",
+          data: score,
+          type: "line",
+          borderColor: "blue",
+          fill: false,
+          tension: 0.3
+        }
+      ]
+    }
+  });
 }
 
-document.getElementById("light").innerHTML =
-"健康燈號: " + light;
-
-// ✅ 圖表（分數用燈色）
-drawChart(sit, walk, score, color);
-}
-
-// ✅ 圖表
-function drawChart(sit, walk, score, color) {
-
-let ctx = document.getElementById("chart").getContext("2d");
-
-if (chartInstance) chartInstance.destroy();
-
-chartInstance = new Chart(ctx, {
-type: "bar",
-data: {
-labels: ["坐","行","分數"],
-datasets: [{
-label: "數值",
-data: [sit, walk, score],
-backgroundColor: ["blue","blue",color]
-}]
-}
-});
-}
-
-// ✅ 儲存
-function saveData() {
-
-let date = document.getElementById("date").value;
-if (!date) return alert("請選日期");
-
-let data = JSON.parse(localStorage.getItem("records")) || {};
-
-data[date] = {
-b: b.value,
-l: l.value,
-t: t.value,
-d: d.value,
-mw: mw.value,
-nw: nw.value,
-ew: ew.value
-};
-
-localStorage.setItem("records", JSON.stringify(data));
-alert("✅ 已儲存 / 覆蓋");
-}
-
-// ✅ 匯出
-function exportData() {
-
-let data = JSON.parse(localStorage.getItem("records")) || {};
-let csv = "日期,早餐,午餐,下午茶,晚餐,行路早,行路午,行路晚\n";
-
-Object.keys(data).forEach(d=>{
-let r = data[d];
-csv += `${d},${r.b},${r.l},${r.t},${r.d},${r.mw},${r.nw},${r.ew}\n`;
-});
-
-let blob = new Blob([csv], {type:"text/csv"});
-let a = document.createElement("a");
-a.href = URL.createObjectURL(blob);
-a.download = "record.csv";
-a.click();
-}
-
+render();
 </script>
 
 </body>
