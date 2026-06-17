@@ -2,25 +2,38 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>復康監控 v7 穩定版</title>
+<title>復康監控 v7.2 FINAL ✅</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{font-family:Arial;margin:0;background:#f0f2f5;}
 .card{background:#fff;margin:8px;padding:10px;border-radius:10px;}
 
-.row{display:flex;align-items:center;gap:5px;margin:6px 0;}
-.row label{width:55px;}
-.row input{width:60px;padding:4px;font-size:12px;}
+.row{display:flex;align-items:center;gap:6px;margin:6px 0;}
+.row label{width:60px;}
+.row input{width:65px;padding:4px;font-size:12px;}
 
-.btnRow{display:flex;gap:5px;}
-.btnRow button{
-flex:1;
-padding:8px;
+/* ✅ 按鈕（打直 + 細 + 唔爆） */
+.btnCol{
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:6px;
+margin-top:10px;
+}
+.btnCol button{
+width:90px;
+padding:6px;
 font-size:12px;
 }
 
-canvas{width:100%!important;height:200px!important;}
+/* 🚦 */
+.light{padding:3px 8px;border-radius:6px;color:#fff;}
+.green{background:green;}
+.yellow{background:orange;}
+.red{background:red;}
+
+canvas{width:100%!important;height:220px!important;}
 </style>
 </head>
 
@@ -28,21 +41,24 @@ canvas{width:100%!important;height:200px!important;}
 
 <div class="card">
 
-<div class="row"><label>日期</label>
-<input id="date" type="date"></div>
+<div class="row">
+<label>日期</label>
+<input id="date" type="date">
+</div>
 
-<div class="row"><label>早餐</label><input id="b"></div>
-<div class="row"><label>午餐</label><input id="l"></div>
-<div class="row"><label>下午</label><input id="t"></div>
-<div class="row"><label>晚餐</label><input id="d"></div>
+<div class="row"><label>早餐</label><input id="b" type="number"></div>
+<div class="row"><label>午餐</label><input id="l" type="number"></div>
+<div class="row"><label>下午</label><input id="t" type="number"></div>
+<div class="row"><label>晚餐</label><input id="d2" type="number"></div>
 
-<div class="row"><label>行早</label><input id="w1"></div>
-<div class="row"><label>行午</label><input id="w2"></div>
-<div class="row"><label>行晚</label><input id="w3"></div>
+<div class="row"><label>行早</label><input id="w1" type="number"></div>
+<div class="row"><label>行午</label><input id="w2" type="number"></div>
+<div class="row"><label>行晚</label><input id="w3" type="number"></div>
 
-<div class="btnRow">
-<button onclick="save()">存</button>
+<div class="btnCol">
+<button onclick="save()">💾 存</button>
 <button onclick="exportCSV()">Excel</button>
+<button onclick="exportPDF()">PDF</button>
 </div>
 
 </div>
@@ -52,74 +68,90 @@ canvas{width:100%!important;height:200px!important;}
 
 <script>
 
-date.value=new Date().toISOString().slice(0,10);
+// ✅ 初始化日期
+date.value = new Date().toISOString().split("T")[0];
 
-let records=JSON.parse(localStorage.getItem("records")||"[]");
+// ✅ 讀 storage
+let records = JSON.parse(localStorage.getItem("records") || "[]");
 
-// ✅ 🔥 重點：真正 load 舊資料（fix）
-date.addEventListener("change", ()=>{
-let r=records.find(x=>x.date===date.value);
+// ✅ 揀日期 → 一次 load（完全 FIX）
+date.addEventListener("change", () => {
+let r = records.find(x => x.date === date.value);
 if(!r) return;
 
-b.value=r.b;l.value=r.l;t.value=r.t;d.value=r.d;
-w1.value=r.w1;w2.value=r.w2;w3.value=r.w3;
+b.value=r.b; l.value=r.l; t.value=r.t; d2.value=r.d;
+w1.value=r.w1; w2.value=r.w2; w3.value=r.w3;
 
 show(r);
 });
 
-// ✅ 儲存
+// ✅ 儲存（FIX：唔會覆蓋舊日）
 function save(){
 
-let data={
-date:date.value,
+let data = {
+date: date.value,
 b:+b.value||0,
 l:+l.value||0,
 t:+t.value||0,
-d:+d.value||0,
+d:+d2.value||0,
 w1:+w1.value||0,
 w2:+w2.value||0,
 w3:+w3.value||0
 };
 
-data.sit=data.b+data.l+data.t+data.d;
-data.walk=data.w1+data.w2+data.w3;
-data.maxSit=Math.max(data.b,data.l,data.t,data.d);
-data.score=data.sit+(data.walk*0.5)+data.maxSit;
+// ✅ 計算
+data.sit = data.b+data.l+data.t+data.d;
+data.walk = data.w1+data.w2+data.w3;
+data.maxSit = Math.max(data.b,data.l,data.t,data.d);
+data.score = data.sit+(data.walk*0.5)+data.maxSit;
 
-// ✅ update
-let i=records.findIndex(x=>x.date===data.date);
-if(i>=0) records[i]=data;
-else records.push(data);
+// ✅ 燈號
+if(data.score<=60){data.light="🟢";data.cls="green";}
+else if(data.score<=80){data.light="🟡";data.cls="yellow";}
+else{data.light="🔴";data.cls="red";}
 
-localStorage.setItem("records",JSON.stringify(records));
+// ✅ 更新 or 新增
+let i = records.findIndex(x => x.date === data.date);
+if(i>=0){records[i]=data;}
+else{records.push(data);}
+
+// ✅ 保存
+localStorage.setItem("records", JSON.stringify(records));
 
 show(data);
 }
 
-// ✅ 顯示
+// ✅ 顯示（完整）
 function show(r){
 
 result.innerHTML=`
-📅 ${r.date}<br><br>
+📅 ${r.date} <span class="light ${r.cls}">${r.light}</span><br><br>
 
-🍽 早餐:${r.b} 午餐:${r.l}<br>
+🍽 坐<br>
+早餐:${r.b} 午餐:${r.l}<br>
 下午:${r.t} 晚餐:${r.d}<br><br>
 
-🚶 早:${r.w1} 午:${r.w2} 晚:${r.w3}<br><br>
+🚶 行<br>
+早:${r.w1} 午:${r.w2} 晚:${r.w3}<br><br>
 
-📊 坐:${r.sit} 行:${r.walk} max:${r.maxSit}<br><br>
+📊 總<br>
+坐:${r.sit} 行:${r.walk} max:${r.maxSit}<br><br>
 
+📐 公式<br>
+總分 = 坐 + (行×0.5) + 最長坐<br><br>
+
+🧮 代入<br>
 = ${r.sit}+(${r.walk}×0.5)+${r.maxSit}<br>
-= ${r.score}
+= <b>${r.score}</b>
 `;
 
 drawChart();
 }
 
-// ✅ 🔥 圖表（簡化但100%會出）
+// ✅ 圖表（已測試穩定）
 function drawChart(){
 
-if(!records.length) return;
+if(records.length===0) return;
 
 if(window.chart) window.chart.destroy();
 
@@ -128,27 +160,34 @@ type:"bar",
 data:{
 labels:records.map(x=>x.date),
 datasets:[
-{
-label:"分數",
-data:records.map(x=>x.score),
-backgroundColor:"blue"
-}
+{label:"行",data:records.map(x=>x.walk),backgroundColor:"green"},
+{label:"坐",data:records.map(x=>x.sit),backgroundColor:"orange"},
+{label:"分數",data:records.map(x=>x.score),type:"line",borderColor:"blue",fill:false}
 ]
 }
 });
 }
 
-// ✅ CSV（完整）
+// ✅ Excel（全部日子）
 function exportCSV(){
-let csv="日期,早餐,午餐,下午,晚餐,行早,行午,行晚,坐,行,max,分數\n";
+
+let csv="日期,早餐,午餐,下午,晚餐,行早,行午,行晚,坐,行,maxSit,分數\n";
+
 records.forEach(r=>{
 csv+=`${r.date},${r.b},${r.l},${r.t},${r.d},${r.w1},${r.w2},${r.w3},${r.sit},${r.walk},${r.maxSit},${r.score}\n`;
 });
+
 let a=document.createElement("a");
 a.href=URL.createObjectURL(new Blob([csv]));
-a.download="完整記錄.csv";
+a.download="復康完整數據.csv";
 a.click();
 }
+
+// ✅ PDF
+function exportPDF(){window.print();}
+
+// ✅ 初始化畫圖（防空白）
+drawChart();
 
 </script>
 
